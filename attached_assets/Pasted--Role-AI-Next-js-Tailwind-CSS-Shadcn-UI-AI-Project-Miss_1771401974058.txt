@@ -1,0 +1,217 @@
+**Role:** 你是一位顶尖的全栈 AI 工程师，擅长使用 Next.js、Tailwind CSS 和 Shadcn UI 构建具有极致审美的 AI 原生应用。
+
+**Project Mission:** 构建一个名为 **“Interview Wiki”** 的面试复盘平台 。核心逻辑是通过 **JD（职位描述）、简历（个人背景）和面试逐字稿** 的“三方对齐”，生成深度的、诊断级的面试复盘报告 。
+### 0) 技术栈与约束
+
+* **Framework**: Next.js 最新稳定版（App Router）
+* **UI**: Tailwind CSS + shadcn/ui（极简、专业、干净的职业审美）
+* **AI**: Vercel AI SDK（`ai`）+ **Gemini 1.5 Flash**（长文本）
+* **DB**: Supabase（存用户、报告、原始输入，报告以 Markdown & JSON 存储）
+* **File parsing**:
+
+  * PDF：`pdf-parse`
+  * Word：`mammoth`
+* **类型与质量要求**：
+
+  * TypeScript 全量类型
+  * Zod 做入参/出参校验
+  * 统一错误处理、loading 状态、空状态
+  * 组件结构清晰，可维护
+
+> 注意：Replit 环境无法使用 Vercel 平台能力时，也要保持与 Vercel 部署兼容（不要写死平台相关路径）。Gemini Key 与 Supabase Key 使用 `.env`。
+
+---
+
+### 1) 核心页面与路由（App Router）
+
+实现以下路由与 UI 样板：
+
+1. `/`
+
+   * 产品 Landing（极简介绍 + CTA：新建复盘）
+2. `/new`（数据输入页）
+
+   * 三个数据源的上传/输入区域（视觉上像三张 Card）
+
+     * JD：支持粘贴文本 + 上传 PDF
+     * 简历：上传 PDF（可选支持 doc/docx）
+     * 逐字稿：支持 Text/Markdown 粘贴 + 上传 `.txt/.md`
+   * “生成复盘报告”按钮
+   * Loading 动画（骨架屏 + 进度文案：解析文件/对齐分析/生成报告）
+3. `/report/[id]`（报告展示页）
+
+   * 左侧 Sidebar：历史维基列表（最近 20 条，可滚动，点击跳转）
+   * 右侧主内容：按 PRD 渲染 4 个模块（见第 3 节）
+4. `/history`（可选，如果你觉得需要）
+
+   * 表格/卡片列表展示历史复盘
+
+---
+
+### 2) 数据输入与解析逻辑
+
+在 `/new` 页面：
+
+* 使用 shadcn/ui 的 `Card / Button / Tabs / Textarea / Input / Separator / Skeleton / Badge` 等构建高审美 UI。
+* 上传文件后，前端把文件以 `FormData` 提交到 API：
+
+  * 服务器端解析：
+
+    * PDF -> `pdf-parse` 提取文本
+    * doc/docx -> `mammoth` 提取文本
+  * 同时支持纯文本直传
+* 统一输出为三个字符串：
+
+  * `jd_text`
+  * `resume_text`
+  * `transcript_text`
+
+---
+
+### 3) AI 诊断引擎（服务端 API）
+
+实现一个 Route Handler：
+
+* `POST /api/analyze`
+* 输入：`jd_text`, `resume_text`, `transcript_text`
+* 逻辑：
+
+  1. 组合 Prompt（必须强调“三方对齐”、诊断深度、输出 JSON 严格遵循 Schema）
+  2. 调用 Gemini 1.5 Flash（优先长文本稳定）
+  3. **必须用 Zod 校验模型输出**，不符合则自动做一次“修复重试”（要求模型只修复为合法 JSON）
+  4. 返回结构化 JSON 给前端
+* 报告保存：
+
+  * 调 Supabase 插入：
+
+    * `title`（从 basic_info 推断：公司/岗位/轮次）
+    * `raw_inputs`（三方输入，可截断或压缩存储）
+    * `report_json`（结构化 JSON）
+    * `report_md`（可选：把 4 模块渲染成 Markdown 用于导出/备份）
+    * `created_at`
+
+---
+
+### 4) 输出 JSON Schema（必须严格遵守）
+
+模型输出必须严格为以下 JSON（字段名、层级一致）：
+
+```json
+{
+  "basic_info": {
+    "company_dept": "...",
+    "position_level": "...",
+    "interview_round": "...",
+    "interviewer_profile": "...",
+    "prediction": { "score": 0, "success_rate": "..." }
+  },
+  "competency_radar": { "professional": 0, "general": 0, "culture": 0 },
+  "alignment_table": [
+    { "dimension": "...", "jd_req": "...", "performance_summary": "...", "ai_match": "..." }
+  ],
+  "qa_full_recon": {
+    "experience": [
+      {
+        "question": "...",
+        "answer": "...",
+        "feedback": "...",
+        "score": 0,
+        "improvement": { "diagnosis": "...", "star_plan": "..." }
+      }
+    ],
+    "professional": [],
+    "behavioral": [],
+    "reverse_questions": { "my_questions": "...", "ai_eval": "...", "suggestions": [] }
+  },
+  "action_plan": { "resume_optimization": "...", "knowledge_gap": [], "followup_strategy": "..." }
+}
+```
+
+---
+
+### 5) 报告页 UI：四大模块渲染规范
+
+在 `/report/[id]`：
+
+* **模块 I：基础信息与概览**
+
+  * 基础信息卡片：公司/岗位/轮次/面试官画像
+  * “胜算预判”展示：score（0-100）+ success_rate（比如“中高/75%”）
+* **模块 II：核心胜任力对齐诊断**
+
+  * 雷达图：使用 `recharts` RadarChart（字段：professional/general/culture）
+  * 对齐表：alignment_table 渲染为 Table（jd_req / performance_summary / ai_match）
+* **模块 III：Q&A 全还原**
+
+  * 分组 Tabs：experience / professional / behavioral / reverse_questions
+  * 每条 Q&A：question/answer/feedback/score（Badge）+ improvement（diagnosis + star_plan）
+* **模块 IV：后续行动路线图**
+
+  * resume_optimization：以可复制块展示
+  * knowledge_gap：列表 + tag
+  * followup_strategy：步骤化呈现（1/2/3）
+
+整体风格：浅底、留白、细边框、轻阴影、专业排版（H1/H2/H3 层级清晰）。
+
+---
+
+### 6) Supabase 数据模型（迁移/SQL）
+
+创建表（最低可用）：
+
+* `reports`
+
+  * `id` uuid pk default gen_random_uuid()
+  * `title` text
+  * `raw_inputs` jsonb
+  * `report_json` jsonb
+  * `report_md` text
+  * `created_at` timestamptz default now()
+
+提供 `supabase.sql` 或在 README 给出 SQL。
+
+---
+
+### 7) 目录结构建议（按此生成）
+
+* `app/`
+
+  * `page.tsx` (landing)
+  * `new/page.tsx`
+  * `report/[id]/page.tsx`
+  * `api/analyze/route.ts`
+* `components/`
+
+  * `sidebar-history.tsx`
+  * `upload-card.tsx`
+  * `report/`（四模块拆分组件）
+* `lib/`
+
+  * `supabase.ts`
+  * `schemas.ts`（Zod schema）
+  * `prompt.ts`（LLM Prompt 模板）
+  * `file-parse.ts`（pdf/doc 解析封装）
+
+---
+
+### 8) 环境变量与运行
+
+创建 `.env.example` 并在 README 写清：
+
+* `GEMINI_API_KEY=...`
+* `SUPABASE_URL=...`
+* `SUPABASE_ANON_KEY=...`
+
+确保 `npm run dev` 可在 Replit 直接启动并可交互使用。
+
+---
+
+### 9) 交付标准（你必须做到）
+
+* 项目可运行（不只是代码片段）
+* `/new` 输入页 UI 完成且精致
+* `/report/[id]` 报告 UI 样板完成（即使先用 mock 数据也要可渲染）
+* `/api/analyze` 可调用（如未配置 key，则提供 mock fallback 并在 UI 明确提示）
+* Zod 校验 + 错误提示 + loading/empty state 完备
+
+## 现在开始：先初始化 Next.js + Tailwind + shadcn/ui，完成 `/new` 与 `/report/[id]` 的 UI 样板，然后补齐 `/api/analyze`、解析逻辑与 Supabase 存储。
