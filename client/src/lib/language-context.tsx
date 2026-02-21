@@ -62,6 +62,22 @@ export const translations = {
       errorMissing: "Missing Information",
       errorDesc: "Please provide JD, Resume, and Transcript to generate a report."
     },
+
+    error: {
+      generateFailed: "Generation Failed",
+      serverError: "Server error. Please try again later.",
+      uploadFailed: "Upload failed. Please retry.",
+      onlyPdf: "Only PDF files are supported.",
+      fileTooLarge: "File is too large (max 5MB).",
+      dragRelease: "Release to upload (PDF ≤ 5MB)",
+      fileInvalid: "File is invalid",
+      fileSelected: "File selected",
+      uploading: "Uploading...",
+      retry: "Retry",
+      remove: "Remove",
+      reselect: "Reselect",
+      view: "View"
+    },
     // Report
     report: {
       id: "ID",
@@ -169,6 +185,22 @@ export const translations = {
       estTime: "预计时间：~30 秒。由 Gemini 1.5 Flash 提供支持。",
       errorMissing: "缺少信息",
       errorDesc: "请提供 JD、简历和逐字稿以生成报告。"
+    },
+
+    error: {
+      generateFailed: "生成失败",
+      serverError: "服务器错误，请稍后重试。",
+      uploadFailed: "上传失败，请重试。",
+      onlyPdf: "仅支持 PDF 文件。",
+      fileTooLarge: "文件过大（最大 5MB）。",
+      dragRelease: "松手即可上传（PDF ≤ 5MB）",
+      fileInvalid: "文件异常",
+      fileSelected: "已选择文件",
+      uploading: "上传中...",
+      retry: "重试",
+      remove: "移除",
+      reselect: "重新选择",
+      view: "查看"
     },
     // Report
     report: {
