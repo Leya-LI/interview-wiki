@@ -13,7 +13,7 @@ type AnalyzeBody = {
 };
 
 const MAX_TEXT_CHARS = 200_000; // 防止极端大输入炸掉函数（可按需调）
-const MODEL_NAME = "gemini-1.5-flash";
+const MODEL_NAME = "gemini-1.5-flash-latest";
 
 function clampText(s: string) {
   if (!s) return "";
