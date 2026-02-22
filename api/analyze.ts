@@ -13,7 +13,23 @@ type AnalyzeBody = {
 };
 
 const MAX_TEXT_CHARS = 200_000; // 防止极端大输入炸掉函数（可按需调）
-const MODEL_NAME = "gemini-1.5-flash-latest";
+
+/**
+ * ✅ 不写死模型：环境变量优先，否则给一个“确定存在”的默认值
+ * 你 /api/models 里已经确认 models/gemini-2.5-flash 存在且支持 generateContent
+ */
+const DEFAULT_MODEL = "models/gemini-2.5-flash";
+
+function getModelName() {
+  // 支持你在 Vercel 里配：GEMINI_MODEL=models/gemini-2.5-flash
+  const envModel = process.env.GEMINI_MODEL?.trim();
+  if (!envModel) return DEFAULT_MODEL;
+
+  // 兼容你只写 "gemini-2.5-flash" 的情况，自动补 models/ 前缀
+  if (!envModel.startsWith("models/")) return `models/${envModel}`;
+
+  return envModel;
+}
 
 function clampText(s: string) {
   if (!s) return "";
@@ -79,13 +95,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ errorCode: "MISSING_GEMINI_API_KEY" });
     }
 
+    const modelName = getModelName();
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: MODEL_NAME,
+      model: modelName,
       generationConfig: {
         temperature: 0.2,
-        // Gemini 支持让它更倾向输出 JSON（不同版本 SDK/模型支持略有差异）
-        // 如果你的 SDK 版本支持，会显著减少“非 JSON 输出”问题
+        // ✅ 有些模型/SDK 支持 JSON mime，会更稳定输出 JSON
+        // 不支持时一般会被忽略，不影响请求
         // @ts-ignore
         responseMimeType: "application/json",
       },
@@ -166,16 +184,21 @@ ${transcriptContent}
       // 兜底：抽取第一个 JSON 对象再 parse
       const extracted = extractJsonObject(jsonText);
       if (!extracted) {
-        return res.status(500).json({ errorCode: "AI_INVALID_JSON" });
+        return res.status(500).json({ errorCode: "AI_INVALID_JSON", raw: jsonText.slice(0, 2000) });
       }
       try {
         analysis = JSON.parse(extracted);
       } catch {
-        return res.status(500).json({ errorCode: "AI_INVALID_JSON" });
+        return res.status(500).json({ errorCode: "AI_INVALID_JSON", raw: extracted.slice(0, 2000) });
       }
     }
 
-    return res.status(200).json({ analysis });
+    return res.status(200).json({
+      analysis,
+      meta: {
+        model: modelName, // ✅ 返回给前端/日志：方便你确认到底跑的是哪个模型
+      },
+    });
   } catch (e) {
     console.error("[/api/analyze] SERVER_ERROR", e);
     return res.status(500).json({ errorCode: "SERVER_ERROR" });
