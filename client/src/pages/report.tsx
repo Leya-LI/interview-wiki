@@ -210,7 +210,57 @@ export default function ReportPage() {
     ];
   }, [analysis, language]);
 
-  const alignment = analysis?.alignment_table ?? [];
+  // 只保留 3 条
+const alignmentRows = (analysis?.alignment_table ?? []).slice(0, 3);
+
+<Card className="h-[360px] flex flex-col">
+  <CardHeader>
+    <CardTitle>{t("report.alignmentTitle")}</CardTitle>
+    <CardDescription>{t("report.alignmentDesc")}</CardDescription>
+  </CardHeader>
+
+  <CardContent className="flex-1 overflow-y-auto space-y-3">
+    {alignmentRows.map((row, idx) => {
+      const tone = matchToTone(row.ai_match);
+      const badgeCls =
+        tone === "good"
+          ? "bg-green-600 hover:bg-green-700"
+          : tone === "warn"
+            ? "bg-yellow-500 hover:bg-yellow-600"
+            : "bg-blue-600 hover:bg-blue-700";
+
+      return (
+        <div
+          key={idx}
+          className={`p-3 rounded-lg border ${
+            tone === "good"
+              ? "bg-green-50 border-green-100"
+              : tone === "warn"
+                ? "bg-yellow-50 border-yellow-100"
+                : "bg-blue-50 border-blue-100"
+          }`}
+        >
+          {/* 标题行：左边维度，右边评分 */}
+          <div className="flex items-start justify-between gap-3">
+            <h4 className="font-semibold text-sm">
+              {row.dimension ?? (language === "zh" ? "维度" : "Dimension")}
+            </h4>
+
+            <Badge className={badgeCls}>
+              {tMatchLevel(row.ai_match, language)}
+            </Badge>
+          </div>
+
+          <p className="text-sm text-muted-foreground mt-2 leading-relaxed break-words whitespace-pre-wrap">
+            {row.performance_summary ?? ""}
+          </p>
+        </div>
+      );
+    })}
+  </CardContent>
+</Card>
+  
+  
   const qa = analysis?.qa_full_recon;
 
   const resumeBullets = useMemo(() => {
