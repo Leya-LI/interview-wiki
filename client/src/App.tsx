@@ -65,27 +65,6 @@ function Router() {
   );
 }
 
-function Router() {
-  const [location] = useLocation();
-  const showSidebar = location !== "/";
-
-  return (
-    <div className="flex min-h-screen bg-background w-full">
-      {showSidebar && <Sidebar className="w-64 flex-shrink-0 hidden md:block border-r" />}
-      <main className="flex-1 flex flex-col min-h-0 overflow-auto relative">
-        <LanguageToggle />
-        <Switch>
-          <Route path="/" component={LandingPage} />
-          <Route path="/new" component={NewReviewPage} />
-          <Route path="/report/:id" component={ReportPage} />
-          <Route path="/history" component={HistoryPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-    </div>
-  );
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
