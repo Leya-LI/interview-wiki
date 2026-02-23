@@ -17,7 +17,6 @@ export default function LandingPage() {
           {t("nav.title")}
         </div>
         <div className="flex items-center gap-4">
-          <LanguageToggle />
           <Button variant="ghost">{t("nav.signIn")}</Button>
           <Link href="/new">
             <Button>{t("nav.getStarted")}</Button>
