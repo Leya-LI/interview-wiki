@@ -34,7 +34,7 @@ export const translations = {
         title: "Action Plan",
         desc: "Receive a tailored improvement roadmap, including resume optimizations and knowledge gap filling."
       },
-      footer: "© 2026 Interview Wiki. Powered by Gemini 1.5 Flash."
+      footer: "© 2026 Interview Wiki. Powered by Gemini 2.5 Flash."
     },
     // New Review
     new: {
@@ -58,7 +58,7 @@ export const translations = {
       ready: "Ready",
       generate: "Generate Review Report",
       analyzing: "Analyzing with Gemini...",
-      estTime: "Estimated time: ~30 seconds. Powered by Gemini 1.5 Flash.",
+      estTime: "Estimated time: ~30 seconds. Powered by Gemini 2.5 Flash.",
       errorMissing: "Missing Information",
       errorDesc: "Please provide JD, Resume, and Transcript to generate a report.",
       uploading: "Uploading…",
@@ -172,7 +172,7 @@ export const translations = {
         title: "行动计划",
         desc: "获取定制的提升路线图，包括简历优化建议和知识盲点补充。"
       },
-      footer: "© 2026 面试维基。由 Gemini 1.5 Flash 提供支持。"
+      footer: "© 2026 面试维基。由 Gemini 2.5 Flash 提供支持。"
     },
     // New Review
     new: {
@@ -196,7 +196,7 @@ export const translations = {
       ready: "已就绪",
       generate: "生成复盘报告",
       analyzing: "Gemini 正在分析中...",
-      estTime: "预计时间：~30 秒。由 Gemini 1.5 Flash 提供支持。",
+      estTime: "预计时间：~30 秒。由 Gemini 2.5 Flash 提供支持。",
       errorMissing: "缺少信息",
       errorDesc: "请提供 JD、简历和逐字稿以生成报告。",
       uploading: "上传中…",
