@@ -97,7 +97,7 @@ function matchToTone(aiMatch?: string): "good" | "warn" | "info" {
   return "info";
 }
 
-/** High/Medium/Low 的本地化显示（你要求评分移到标题右侧，就是这个 badge 文案） */
+/** High/Medium/Low 的本地化显示 */
 function tMatch(aiMatch: string | undefined, language: "zh" | "en") {
   const v = (aiMatch ?? "").trim();
   if (!v) return language === "zh" ? "未知" : "Unknown";
@@ -132,7 +132,6 @@ export default function ReportPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
   useEffect(() => {
-    // 当前只支持 /report/result：从 localStorage 读取
     if (id === "result") {
       const parsed = safeJsonParse<Analysis>(localStorage.getItem("latestReport"));
       if (parsed) {
@@ -200,7 +199,6 @@ export default function ReportPage() {
     ];
   }, [analysis, language]);
 
-  // ✅ 对齐分析：只保留 3 条
   const alignmentRows = useMemo(() => {
     return (analysis?.alignment_table ?? []).slice(0, 3);
   }, [analysis]);
@@ -278,8 +276,8 @@ export default function ReportPage() {
                 title: language === "zh" ? "待实现" : "TODO",
                 description:
                   language === "zh"
-                    ? "导出 PDF 需要可打印模板（下一步我可以帮你做）。"
-                    : "Export PDF requires a printable template (I can help next).",
+                    ? "导出 PDF 需要可打印模板。"
+                    : "Export PDF requires a printable template.",
               })
             }
           >
@@ -368,10 +366,10 @@ export default function ReportPage() {
         </Card>
       </div>
 
-      {/* Radar + Alignment (同高对齐) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ✅ 雷达图卡：固定高度 */}
-        <Card className="h-[360px] flex flex-col">
+      {/* 修改点 1: 比例调整为 1:2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* 雷达图卡：占 1/3 */}
+        <Card className="h-[360px] flex flex-col lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
@@ -396,14 +394,15 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
-        {/* ✅ 对齐分析卡：只保留 3 个模块 + 评分移到标题右侧 + 不要底部评分行 */}
-        <Card className="h-[360px] flex flex-col">
+        {/* 对齐分析卡：占 2/3 */}
+        <Card className="h-[360px] flex flex-col lg:col-span-2">
           <CardHeader>
             <CardTitle>{t("report.alignmentTitle")}</CardTitle>
             <CardDescription>{t("report.alignmentDesc")}</CardDescription>
           </CardHeader>
 
-          <CardContent className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {/* 修改点 2: 移除 pr-1，改用标准 p-6 保持左右对称 */}
+          <CardContent className="flex-1 overflow-y-auto space-y-3 p-6 pt-0">
             {alignmentRows.length === 0 ? (
               <div className="text-sm text-muted-foreground">
                 {language === "zh" ? "暂无对齐分析结果。" : "No alignment results."}
@@ -436,17 +435,14 @@ export default function ReportPage() {
                       : "bg-blue-600 hover:bg-blue-700";
 
                 return (
-                  <div key={idx} className={`flex items-start gap-3 p-3 rounded-lg border ${boxClass}`}>
+                  <div key={idx} className={`flex items-start gap-3 p-4 rounded-lg border ${boxClass}`}>
                     <Icon className={`w-5 h-5 ${iconColor} mt-0.5 shrink-0`} />
 
                     <div className="min-w-0 w-full">
-                      {/* ✅ 标题行：左维度 + 右侧评分（匹配度） */}
                       <div className="flex items-start justify-between gap-3">
                         <h4 className="font-semibold text-sm leading-snug break-words">
                           {row.dimension || (language === "zh" ? `维度 ${idx + 1}` : `Dimension ${idx + 1}`)}
                         </h4>
-
-                        {/* ✅ 评分在标题右侧；不再在末尾单独显示一行评分 */}
                         <Badge className={badgeCls}>
                           {tMatch(row.ai_match, language)}
                         </Badge>
@@ -465,7 +461,7 @@ export default function ReportPage() {
       </div>
 
       {/* QA */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden shadow-sm">
         <CardHeader className="bg-muted/30 border-b">
           <CardTitle>{t("report.qaTitle")}</CardTitle>
           <CardDescription>{t("report.qaDesc")}</CardDescription>
@@ -538,7 +534,7 @@ export default function ReportPage() {
 
       {/* Action Plan */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-t-4 border-t-purple-500">
+        <Card className="border-t-4 border-t-purple-500 shadow-sm">
           <CardHeader>
             <CardTitle>{t("report.actionPlan.resumeTitle")}</CardTitle>
           </CardHeader>
@@ -570,7 +566,7 @@ export default function ReportPage() {
                 <h4 className="text-sm font-semibold">
                   {language === "zh" ? "跟进策略" : "Follow-up strategy"}
                 </h4>
-                <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md border whitespace-pre-wrap break-words">
+                <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md border whitespace-pre-wrap break-words leading-relaxed">
                   {analysis.action_plan.followup_strategy}
                 </p>
               </div>
@@ -578,13 +574,12 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-t-4 border-t-orange-500">
+        <Card className="border-t-4 border-t-orange-500 shadow-sm">
           <CardHeader>
             <CardTitle>{t("report.actionPlan.knowledgeGaps")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* ✅ 防溢出：滚动 + 允许换行 */}
-            <div className="flex flex-wrap gap-2 mb-4 max-h-[220px] overflow-y-auto pr-1">
+            <div className="flex flex-wrap gap-2 mb-4 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin">
               {(analysis.action_plan?.knowledge_gap ?? []).length ? (
                 analysis.action_plan!.knowledge_gap!.slice(0, 12).map((g, i) => (
                   <Badge
@@ -612,39 +607,42 @@ function QAList({ items }: { items: QAItem[] }) {
 
   if (!items.length) {
     return (
-      <div className="p-6 text-sm text-muted-foreground">
+      <div className="p-12 text-center text-sm text-muted-foreground italic">
         {language === "zh" ? "暂无该分类问答解析。" : "No Q&A items in this category."}
       </div>
     );
   }
 
   return (
-    <div className="divide-y">
+    <div className="divide-y divide-border">
       {items.slice(0, 12).map((it, idx) => {
         const score = clampScore(it.score);
         const label = score >= 80 ? t("report.qaItems.excellent") : t("report.qaItems.needsWork");
         const badgeClass = score >= 80 ? "bg-green-600 hover:bg-green-700" : "bg-yellow-500 hover:bg-yellow-600";
 
         return (
-          <div key={idx} className="p-6 hover:bg-muted/10 transition-colors">
-            <div className="flex justify-between items-start mb-4 gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Badge variant="outline" className="font-mono text-muted-foreground">
+          <div key={idx} className="p-6 hover:bg-muted/5 transition-colors">
+            <div className="flex justify-between items-start mb-6 gap-3">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <Badge variant="outline" className="font-mono text-muted-foreground mt-1 shrink-0">
                   Q{idx + 1}
                 </Badge>
-                <h3 className="font-medium text-lg truncate">{it.question || "-"}</h3>
+                {/* 修改点 3: 移除 truncate，允许长标题折行显示全 */}
+                <h3 className="font-semibold text-lg leading-snug whitespace-normal break-words">
+                  {it.question || "-"}
+                </h3>
               </div>
-              <Badge className={badgeClass}>
+              <Badge className={`${badgeClass} shrink-0`}>
                 {label} ({score}/100)
               </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
                   {t("report.qaItems.summary")}
                 </h4>
-                <p className="text-sm text-muted-foreground bg-muted/30 p-4 rounded-md border leading-relaxed whitespace-pre-wrap break-words">
+                <p className="text-sm text-muted-foreground bg-muted/20 p-4 rounded-lg border border-dashed leading-relaxed whitespace-pre-wrap break-words">
                   {it.answer || "-"}
                 </p>
               </div>
@@ -653,23 +651,25 @@ function QAList({ items }: { items: QAItem[] }) {
                 <h4 className="text-xs font-bold uppercase text-primary tracking-wider flex items-center gap-2">
                   <Sparkles className="w-3 h-3" /> {t("report.qaItems.coaching")}
                 </h4>
-                <div className="bg-primary/5 border border-primary/10 p-4 rounded-md space-y-3">
-                  <p className="text-sm font-medium text-foreground whitespace-pre-wrap break-words">
+                <div className="bg-primary/5 border border-primary/10 p-5 rounded-lg space-y-3">
+                  <p className="text-sm font-medium text-foreground whitespace-pre-wrap break-words leading-relaxed">
                     {it.feedback || "-"}
                   </p>
 
                   {(it.improvement?.diagnosis || it.improvement?.star_plan) ? (
-                    <div className="text-sm text-muted-foreground pl-3 border-l-2 border-primary/30 space-y-2">
+                    <div className="text-sm text-muted-foreground pl-3 border-l-2 border-primary/30 space-y-3 mt-4">
                       {it.improvement?.diagnosis ? (
                         <div className="whitespace-pre-wrap break-words">
-                          <strong>{language === "zh" ? "诊断：" : "Diagnosis: "}</strong>
-                          <span>{it.improvement.diagnosis}</span>
+                          <strong className="text-xs text-primary/80">{language === "zh" ? "诊断：" : "Diagnosis: "}</strong>
+                          <span className="text-foreground/80">{it.improvement.diagnosis}</span>
                         </div>
                       ) : null}
                       {it.improvement?.star_plan ? (
                         <div className="whitespace-pre-wrap break-words">
-                          <strong>{language === "zh" ? "STAR 改写：" : "STAR rewrite: "}</strong>
-                          <span>{it.improvement.star_plan}</span>
+                          <strong className="text-xs text-primary/80">{language === "zh" ? "STAR 改写：" : "STAR rewrite: "}</strong>
+                          <div className="mt-1 bg-background/50 p-3 rounded border border-primary/10 italic text-foreground/70">
+                            {it.improvement.star_plan}
+                          </div>
                         </div>
                       ) : null}
                     </div>
