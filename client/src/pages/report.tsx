@@ -366,10 +366,10 @@ export default function ReportPage() {
         </Card>
       </div>
 
-      {/* 修改点 1: 比例调整为 1:2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 雷达图卡：占 1/3 */}
-        <Card className="h-[360px] flex flex-col lg:col-span-1">
+      {/* 修改点 1: 比例调整为 35% vs 剩余部分 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
+        {/* 雷达图卡 */}
+        <Card className="h-[360px] flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-primary" />
@@ -379,7 +379,7 @@ export default function ReportPage() {
           </CardHeader>
           <CardContent className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                 <PolarGrid />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
                 <Radar
@@ -394,14 +394,13 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
-        {/* 对齐分析卡：占 2/3 */}
-        <Card className="h-[360px] flex flex-col lg:col-span-2">
+        {/* 对齐分析卡 */}
+        <Card className="h-[360px] flex flex-col">
           <CardHeader>
             <CardTitle>{t("report.alignmentTitle")}</CardTitle>
             <CardDescription>{t("report.alignmentDesc")}</CardDescription>
           </CardHeader>
 
-          {/* 修改点 2: 移除 pr-1，改用标准 p-6 保持左右对称 */}
           <CardContent className="flex-1 overflow-y-auto space-y-3 p-6 pt-0">
             {alignmentRows.length === 0 ? (
               <div className="text-sm text-muted-foreground">
@@ -627,7 +626,6 @@ function QAList({ items }: { items: QAItem[] }) {
                 <Badge variant="outline" className="font-mono text-muted-foreground mt-1 shrink-0">
                   Q{idx + 1}
                 </Badge>
-                {/* 修改点 3: 移除 truncate，允许长标题折行显示全 */}
                 <h3 className="font-semibold text-lg leading-snug whitespace-normal break-words">
                   {it.question || "-"}
                 </h3>
