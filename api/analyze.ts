@@ -4,6 +4,7 @@ import pdfParse from "pdf-parse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 type AnalyzeBody = {
+  lang?: "zh" | "en";
   jdText?: string;
   resumeText?: string;
   transcriptText?: string;
@@ -81,6 +82,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const body = (req.body ?? {}) as AnalyzeBody;
+    const lang: "zh" | "en" = body.lang === "en" ? "en" : "zh";
+    const OUTPUT_LANG_DESC =
+      lang === "zh"
+        ? "Simplified Chinese (简体中文). Do NOT mix English unless it is a proper noun (e.g., company/tool name) or a fixed enum value."
+        : "English only. Do NOT output any Chinese.";
 
     let jdContent = (body.jdText ?? "").trim();
     let resumeContent = (body.resumeText ?? "").trim();
@@ -209,6 +215,11 @@ Hard rules:
   - resume_optimization: provide ONLY 2 bullet points (in a single string, separated by \\n).
   - knowledge_gap: 4–6 items only.
   - followup_strategy: ONLY 2 bullet points (in a single string, separated by \\n).
+- OUTPUT LANGUAGE: ${OUTPUT_LANG_DESC}
+- Fixed enum values MUST stay in English exactly as specified by schema:
+  - alignment_table.ai_match must be one of: "High" | "Medium" | "Low"
+  - basic_info.prediction.success_rate must be one of: "Low" | "Medium" | "Medium-High" | "High"
+  Frontend will localize these enums. All other human-readable strings must follow OUTPUT LANGUAGE.
 
 Inputs:
 JD:
