@@ -11,7 +11,7 @@ import HistoryPage from "@/pages/history";
 import Sidebar from "@/components/layout/sidebar";
 import { LanguageProvider, useLanguage } from "./lib/language-context";
 
-function LanguageToggle() {
+export function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
   return (
     <div className="flex gap-1 bg-background/80 backdrop-blur border rounded-full p-1 shadow-sm">
