@@ -113,6 +113,27 @@ export default function ReportPage() {
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
+  const tLevel = (v?: string) => {
+  if (!v) return "-";
+  const mapZh: Record<string, string> = {
+    "Low": "低",
+    "Medium": "中",
+    "Medium-High": "中高",
+    "High": "高",
+  };
+  return language === "zh" ? (mapZh[v] ?? v) : v;
+  };
+
+  const tMatch = (v?: string) => {
+    if (!v) return "-";
+    const mapZh: Record<string, string> = {
+      "Low": "低匹配",
+      "Medium": "中匹配",
+      "High": "高匹配",
+    };
+    return language === "zh" ? (mapZh[v] ?? v) : v;
+  };
+
   useEffect(() => {
     // 只处理你当前流程：/report/result
     if (id === "result") {
@@ -325,7 +346,7 @@ export default function ReportPage() {
                 </span>
                 <div className="flex items-center gap-2 font-bold text-green-600">
                   <TrendingUp className="w-4 h-4" />
-                  {basicInfo.predictionLabel} ({basicInfo.successRate})
+                  {basicInfo.prediction} ({tLevel(basicInfo.successRate)})
                 </div>
               </div>
             </div>
@@ -368,7 +389,7 @@ export default function ReportPage() {
             </CardTitle>
             <CardDescription>{t("report.radarDesc")}</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px]">
+          <CardContent className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                 <PolarGrid />
@@ -562,10 +583,14 @@ export default function ReportPage() {
             <CardTitle>{t("report.actionPlan.knowledgeGaps")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4 max-h-[220px] overflow-y-auto pr-1">
               {(analysis.action_plan?.knowledge_gap ?? []).length ? (
                 analysis.action_plan!.knowledge_gap!.slice(0, 12).map((g, i) => (
-                  <Badge key={i} variant="secondary" className="px-3 py-1 text-sm">
+                  <Badge
+                    key={i}
+                    variant="secondary"
+                    className="px-3 py-1 text-sm max-w-full whitespace-normal break-words leading-snug"
+                  >
                     {g}
                   </Badge>
                 ))
