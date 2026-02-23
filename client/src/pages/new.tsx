@@ -28,7 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/language-context";
 import { supabase } from "@/lib/supabase";
 
-const MAX_PDF_BYTES = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 
 type AnalyzeRequestBody = {
   jdText: string;
@@ -36,7 +36,7 @@ type AnalyzeRequestBody = {
   transcriptText: string;
   jdPdfUrl: string;
   resumePdfUrl: string;
-  transcriptPdfUrl: string;
+  transcriptFileUrl: string;
 };
 
 export default function NewReviewPage() {
@@ -53,13 +53,13 @@ export default function NewReviewPage() {
   // ✅ 三份 PDF 上传后的 public URL
   const [jdPdfUrl, setJdPdfUrl] = useState<string>("");
   const [resumePdfUrl, setResumePdfUrl] = useState<string>("");
-  const [transcriptPdfUrl, setTranscriptPdfUrl] = useState<string>("");
+  const [transcriptFileUrl, setTranscriptFileUrl] = useState<string>("");
 
   const handleAnalyze = async () => {
     const hasJd = jdText.trim().length > 0 || !!jdPdfUrl;
     const hasResume = resumeText.trim().length > 0 || !!resumePdfUrl;
     const hasTranscript =
-      transcriptText.trim().length > 0 || !!transcriptPdfUrl;
+      transcriptText.trim().length > 0 || !!transcriptFileUrl;
 
     if (!hasJd || !hasResume || !hasTranscript) {
       toast({
@@ -79,7 +79,7 @@ export default function NewReviewPage() {
         transcriptText,
         jdPdfUrl,
         resumePdfUrl,
-        transcriptPdfUrl,
+        transcriptFileUrl,
       };
 
       const response = await fetch("/api/analyze", {
@@ -139,6 +139,11 @@ export default function NewReviewPage() {
           onChange={setJdText}
           uploadLabel={t("new.uploadJD")}
           onFileUrlChange={setJdPdfUrl}
+          accept="application/pdf"
+          allowedExt={["pdf"]}
+          allowedMime={["application/pdf"]}
+          uploadExtHint="PDF"
+          uploadPrefix="jd"
         />
 
         <InputCard
@@ -150,6 +155,11 @@ export default function NewReviewPage() {
           onChange={setResumeText}
           uploadLabel={t("new.uploadResume")}
           onFileUrlChange={setResumePdfUrl}
+          accept="application/pdf"
+          allowedExt={["pdf"]}
+          allowedMime={["application/pdf"]}
+          uploadExtHint="PDF"
+          uploadPrefix="jd"
         />
 
         <InputCard
@@ -160,7 +170,14 @@ export default function NewReviewPage() {
           value={transcriptText}
           onChange={setTranscriptText}
           uploadLabel={t("new.uploadTranscript")}
-          onFileUrlChange={setTranscriptPdfUrl}
+          onFileUrlChange={setTranscriptFileUrl}
+
+          // ✅ 逐字稿：只允许 txt/md，不允许 pdf
+          accept=".txt,.md,text/plain,text/markdown"
+          allowedExt={["txt", "md"]}
+          allowedMime={["text/plain", "text/markdown"]}
+          uploadExtHint="TXT/MD"        // 用于 UI 提示
+          uploadPrefix="transcript"     // Supabase 路径前缀（可选）
         />
       </div>
 
@@ -222,6 +239,13 @@ function InputCard({
   onChange,
   uploadLabel,
   onFileUrlChange,
+
+  // ✅ 新增
+  accept,
+  allowedExt,
+  allowedMime,
+  uploadExtHint,
+  uploadPrefix = "uploads",
 }: {
   title: string;
   icon: React.ReactNode;
@@ -231,6 +255,12 @@ function InputCard({
   onChange: (val: string) => void;
   uploadLabel: string;
   onFileUrlChange: (url: string) => void;
+
+  accept: string;               // input accept
+  allowedExt: string[];         // ["pdf"] or ["txt","md"]
+  allowedMime?: string[];       // 可选
+  uploadExtHint?: string;       // UI展示：例如 "PDF" 或 "TXT/MD"
+  uploadPrefix?: string;        // Supabase storage path 前缀
 }) {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -291,25 +321,49 @@ function InputCard({
     onFileUrlChange("");
   };
 
+  const getExt = (name: string) => {
+    const m = name.toLowerCase().match(/\.([a-z0-9]+)$/);
+    return m ? m[1] : "";
+  };
+
+  const guessContentType = (ext: string) => {
+    if (ext === "pdf") return "application/pdf";
+    if (ext === "txt") return "text/plain";
+    if (ext === "md") return "text/markdown";
+  return "application/octet-stream";
+  };
+
   const validateFile = (file: File) => {
-    if (file.type !== "application/pdf") {
-      return t("new.pdfOnly");
+    const ext = getExt(file.name);
+
+    if (!allowedExt.includes(ext)) {
+      // 你可以加一个 i18n key：new.fileTypeNotAllowed
+      // 这里给一个不写死语言的做法：复用已有 toast 文案也行
+      return t("new.fileTypeNotAllowed");
     }
-    if (file.size > MAX_PDF_BYTES) {
-      // 避免拼接中文：用 t + formatBytes
+
+    // mime 可选校验：md 有时浏览器给空 mime，别误杀
+    if (allowedMime && allowedMime.length > 0) {
+      if (file.type && !allowedMime.includes(file.type)) {
+        // ext 对就放行
+      }
+    }
+
+    if (file.size > MAX_FILE_BYTES) {
       return `${t("new.fileTooLarge")}（${formatBytes(file.size)}），${t("new.maxSize")}`;
     }
+
     return "";
   };
 
-  const uploadPdfToSupabase = async (file: File) => {
-    // bucket 名：uploads（你已创建）
+  const uploadFileToSupabase = async (file: File) => {
     const bucket = "uploads";
-    const path = `uploads/${crypto.randomUUID()}.pdf`;
+    const ext = getExt(file.name) || "bin";
+    const path = `${uploadPrefix}/${crypto.randomUUID()}.${ext}`;
 
     const { error } = await supabase.storage
       .from(bucket)
-      .upload(path, file, { contentType: "application/pdf", upsert: false });
+      .upload(path, file, { contentType: guessContentType(ext), upsert: false });
 
     if (error) throw error;
 
@@ -336,7 +390,7 @@ function InputCard({
       setIsUploading(true);
       startFakeProgress();
 
-      const publicUrl = await uploadPdfToSupabase(file);
+      const publicUrl = await uploadFileToSupabase(file);
 
       stopFakeProgress();
       setUploadProgress(100);
@@ -428,7 +482,7 @@ function InputCard({
             <input
               ref={inputRef}
               type="file"
-              accept="application/pdf"
+              accept={accept}
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -448,7 +502,9 @@ function InputCard({
                 </div>
                 <h3 className="font-medium">{uploadLabel}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {isDragOver ? t("new.dropHere") : `${t("new.dragDrop")}（PDF ≤ 5MB）`}
+                  {isDragOver
+                      ? t("new.dropHere")
+                      : `${t("new.dragDrop")}（${uploadExtHint ?? ""} ≤ 5MB）`}
                 </p>
 
                 <Button
@@ -477,7 +533,9 @@ function InputCard({
                         </p>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {fileSize ? `${formatBytes(fileSize)} · PDF` : "PDF（≤ 5MB）"}
+                        {fileSize
+                          ? `${formatBytes(fileSize)} · ${uploadExtHint ?? ""}`
+                          : `${uploadExtHint ?? ""}（≤ 5MB）`}
                       </p>
                     </div>
 
