@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle2, FileText, BrainCircuit, BarChart3 } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { LanguageToggle } from "@/App";
 
 export default function LandingPage() {
   const { t } = useLanguage();
@@ -17,6 +18,7 @@ export default function LandingPage() {
           {t("nav.title")}
         </div>
         <div className="flex items-center gap-4">
+          <LanguageToggle />
           <Button variant="ghost">{t("nav.signIn")}</Button>
           <Link href="/new">
             <Button>{t("nav.getStarted")}</Button>
