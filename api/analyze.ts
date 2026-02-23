@@ -9,7 +9,7 @@ type AnalyzeBody = {
   transcriptText?: string;
   jdPdfUrl?: string;
   resumePdfUrl?: string;
-  transcriptPdfUrl?: string;
+  transcriptFileUrl?: string;
 };
 
 const MAX_TEXT_CHARS = 200_000; // 防止极端大输入炸掉函数（可按需调）
@@ -47,6 +47,22 @@ async function fetchPdfText(url: string): Promise<string> {
   return parsed.text || "";
 }
 
+async function fetchTextFile(url: string): Promise<string> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error("FILE_FETCH_FAILED");
+  return await resp.text();
+}
+
+function getExtFromUrl(url: string) {
+  try {
+    const u = new URL(url);
+    const m = u.pathname.toLowerCase().match(/\.([a-z0-9]+)$/);
+    return m ? m[1] : "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Gemini 偶尔会输出 ```json ... ``` 或在前后加解释，这里做一次“取第一个 JSON 对象”兜底
  */
@@ -74,9 +90,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       if (body.jdPdfUrl) jdContent = `${jdContent}\n${await fetchPdfText(body.jdPdfUrl)}`.trim();
       if (body.resumePdfUrl) resumeContent = `${resumeContent}\n${await fetchPdfText(body.resumePdfUrl)}`.trim();
-      if (body.transcriptPdfUrl) transcriptContent = `${transcriptContent}\n${await fetchPdfText(body.transcriptPdfUrl)}`.trim();
+
+      if (body.transcriptFileUrl) {
+        const ext = getExtFromUrl(body.transcriptFileUrl);
+        if (ext !== "txt" && ext !== "md") {
+        return res.status(400).json({ errorCode: "TRANSCRIPT_FILE_TYPE_NOT_ALLOWED" });
+        }
+        transcriptContent = `${transcriptContent}\n${await fetchTextFile(body.transcriptFileUrl)}`.trim();
+      }
     } catch (e: any) {
-      const code = e?.message === "PDF_FETCH_FAILED" ? "PDF_FETCH_FAILED" : "PDF_PARSE_FAILED";
+      const msg = e?.message;
+      const code =
+      msg === "PDF_FETCH_FAILED" ? "PDF_FETCH_FAILED" :
+      msg === "FILE_FETCH_FAILED" ? "FILE_FETCH_FAILED" :
+      "FILE_PARSE_FAILED";
       return res.status(400).json({ errorCode: code });
     }
 
@@ -139,84 +166,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }`;
 
 const prompt = `
-You are a strict, evidence-based interview evaluator.
+Role:
+You are a real human interviewer and hiring committee member. Your style is concise, evidence-based, and practical.
 
 Goal:
-Align JD (requirements), Resume (background), and Transcript (actual answers).
-Return a diagnostic report STRICTLY as valid JSON matching EXACTLY this schema (no extra keys, no markdown, no commentary).
+Given JD, Resume, and Transcript, produce an interview debrief report STRICTLY as valid JSON matching EXACTLY this schema (no extra keys, no markdown, no commentary).
 
-Schema (must match exactly):
+Schema:
 ${schema}
 
-GLOBAL RULES (must follow):
-- Output ONLY one JSON object. No \`\`\` fences. No prose before/after JSON.
-- Do NOT invent facts not present in inputs. If something is unknown, infer conservatively or state uncertainty in existing text fields (do NOT add new keys).
-- Avoid generic template phrases. Every claim must be grounded in evidence from JD/Resume/Transcript.
-- All numeric scores are integers 0-100.
-- Prefer conservative scoring. Default is 50 unless clear evidence supports higher.
-- Never give >=85 unless the transcript shows: structured reasoning + role-relevant depth + concrete details (numbers, trade-offs, constraints).
-- If evidence is weak/ambiguous, score must be <=60.
-
-EVIDENCE REQUIREMENT:
-- alignment_table: each row MUST include:
-  - dimension: concrete competency/requirement dimension (e.g. "Metrics-driven product thinking", "System design trade-offs", "Stakeholder management")
-  - jd_req: quote or tightly paraphrase the JD requirement (short)
-  - performance_summary: MUST cite specific evidence from [TRANSCRIPT] and/or [RESUME].
-    Use one short excerpt or paraphrase (<=25 words) plus what it implies.
-  - ai_match: one of: "High" | "Medium" | "Low" (use exactly these 3 values)
-- qa_full_recon (each item):
-  - question: reconstruct from transcript (or the best approximation)
-  - answer: summarize what candidate actually said (not what they should have said)
-  - feedback: MUST be critique-first:
-    1) What was missing/weak (specific)
-    2) Why it matters for this role (tie back to JD)
-    3) What to improve next time (specific)
-    Also include a short evidence reference from transcript (<=25 words) or paraphrase.
-  - score: conservative integer 0-100 based on rubric below
-  - improvement.diagnosis: 2-4 bullet-like sentences, concrete gaps
-  - improvement.star_plan: rewrite the answer using STAR/structured format, keep it realistic and consistent with resume
-
-SCORING RUBRIC (apply to each QA score and also guide overall prediction score):
-- 0-39: incorrect / evasive / no relevant content
-- 40-59: partially relevant but vague; lacks structure/evidence
-- 60-74: mostly relevant; some structure; limited depth or missing trade-offs
-- 75-84: strong; clear structure; correct; role-relevant; some quantified impact
-- 85-100: exceptional; deep trade-offs; strong evidence; numbers; clear ownership and impact
-
-OUTPUT EXPECTATIONS:
-- basic_info:
-  - company_dept: infer from JD if possible (company/team/department). If unknown, put the role/company name from JD title.
-  - position_level: infer level/title from JD or resume.
-  - interview_round: infer from transcript/JD context. If unclear, use a reasonable guess (e.g. "Round 1") but mention uncertainty in interviewer_profile or interview_round text.
-  - interviewer_profile: infer from transcript cues (e.g. HR/EM/Tech lead). If unclear, "Unknown".
-  - prediction.score: overall match score 0-100 using conservative rubric.
-  - prediction.success_rate: a short label like "Low", "Medium", "Medium-High", "High" (do not use % unless clearly justified).
-- competency_radar:
-  - professional/general/culture: conservative 0-100. Professional = role skills; General = communication/structure; Culture = values/working style signals.
-- alignment_table:
-  - 4-7 rows, covering must-have skills + soft skills + role-specific areas.
-  - Each row must have evidence.
+Hard rules:
+- Return ONLY the JSON object. No markdown fences. No explanations.
+- ${languageRule}
+- Do NOT output tags like [JD], [RESUME], [TRANSCRIPT] anywhere in the JSON.
+- Avoid AI-ish phrasing. Write like a real interviewer: short sentences, specific, actionable.
+- Every evaluation MUST include concrete evidence. Evidence should be short quotes or facts (<= 25 words) embedded inside the corresponding text fields.
+- Scores must be conservative and calibrated:
+  - 55–65: meets minimum / unclear signals
+  - 66–75: good, but with gaps
+  - 76–85: strong
+  - 86–95: exceptional (rare, only with strong evidence)
+  - Do not exceed 90 unless there are multiple hard evidences.
+- alignment_table: EXACTLY 3 rows. Each row:
+  - dimension: short label
+  - jd_req: one sentence (what JD expects)
+  - performance_summary: 2–3 sentences max. MUST include 1 evidence snippet.
+  - ai_match: one of "High" | "Medium" | "Low"
+  - Do NOT put score on a separate last line.
 - qa_full_recon:
-  - experience/professional/behavioral: try to include at least 2 items each if transcript provides them.
-  - If transcript lacks enough questions for a category, keep the array shorter but do NOT invent; still return arrays (possibly empty).
-  - reverse_questions:
-    - my_questions: what candidate asked (or "None stated")
-    - ai_eval: critique quality of questions relative to JD (evidence-based)
-    - suggestions: 3-6 strong reverse questions tailored to JD
+  - Put questions into experience / professional / behavioral.
+  - For each item:
+    - feedback: 2–3 sentences, must include evidence
+    - score: 0–100 integer using the calibration above
+    - improvement.diagnosis: 2 bullet-like lines max (no prefix like "诊断：")
+    - improvement.star_plan: MUST be exactly 4 lines:
+      S: ...
+      T: ...
+      A: ...
+      R: ...
+    - Keep star_plan concise (each line one sentence).
 - action_plan:
-  - resume_optimization: provide 4-8 bullet lines (newline separated) with resume bullet rewrites anchored in resume + interview content.
-  - knowledge_gap: 5-10 items, specific topics/skills to study.
-  - followup_strategy: concrete plan for next round (what to practice, how to answer, what artifacts to prepare)
+  - resume_optimization: provide ONLY 2 bullet points (in a single string, separated by \\n).
+  - knowledge_gap: 4–6 items only.
+  - followup_strategy: ONLY 2 bullet points (in a single string, separated by \\n).
 
-NOW analyze the inputs.
-
-[JD]
+Inputs:
+JD:
 ${jdContent}
 
-[RESUME]
+Resume:
 ${resumeContent}
 
-[TRANSCRIPT]
+Transcript:
 ${transcriptContent}
 `.trim();
 
