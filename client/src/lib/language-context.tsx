@@ -89,6 +89,7 @@ export const translations = {
       remove: "Remove",
       reselect: "Reselect",
       view: "View",
+      fileTypeNotAllowed: "Unsupported file type",
       unknown: "Unknown error"
     },
     // Report
@@ -226,6 +227,7 @@ export const translations = {
       remove: "移除",
       reselect: "重新选择",
       view: "查看",
+      fileTypeNotAllowed: "不支持的文件类型",
       unknown: "未知错误"
     },
     // Report
