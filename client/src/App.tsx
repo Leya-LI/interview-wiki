@@ -14,19 +14,53 @@ import { LanguageProvider, useLanguage } from "./lib/language-context";
 function LanguageToggle() {
   const { language, setLanguage } = useLanguage();
   return (
-    <div className="fixed top-4 right-4 z-[60] flex gap-1 bg-background/80 backdrop-blur border rounded-full p-1 shadow-sm">
-      <button 
+    <div className="flex gap-1 bg-background/80 backdrop-blur border rounded-full p-1 shadow-sm">
+      <button
         onClick={() => setLanguage("en")}
-        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${language === 'en' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+          language === "en"
+            ? "bg-primary text-primary-foreground"
+            : "hover:bg-muted text-muted-foreground"
+        }`}
       >
         EN
       </button>
-      <button 
+      <button
         onClick={() => setLanguage("zh")}
-        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${language === 'zh' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'}`}
+        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+          language === "zh"
+            ? "bg-primary text-primary-foreground"
+            : "hover:bg-muted text-muted-foreground"
+        }`}
       >
         中文
       </button>
+    </div>
+  );
+}
+
+function Router() {
+  const [location] = useLocation();
+  const showSidebar = location !== "/";
+
+  return (
+    <div className="flex min-h-screen bg-background w-full">
+      {showSidebar && <Sidebar className="w-64 flex-shrink-0 hidden md:block border-r" />}
+
+      <main className="flex-1 flex flex-col min-h-0 overflow-auto">
+        {/* ✅ 顶栏占位：不会遮挡按钮 */}
+        <div className="sticky top-0 z-[60] w-full flex justify-end p-4 bg-background/70 backdrop-blur">
+          <LanguageToggle />
+        </div>
+
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/new" component={NewReviewPage} />
+          <Route path="/report/:id" component={ReportPage} />
+          <Route path="/history" component={HistoryPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </main>
     </div>
   );
 }
