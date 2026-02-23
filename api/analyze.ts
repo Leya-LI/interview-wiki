@@ -204,6 +204,7 @@ Hard rules:
   - Do NOT put score on a separate last line.
 - qa_full_recon:
   - Put questions into experience / professional / behavioral.
+  - The 'question' and 'answer' fields MUST be restored as completely and accurately as possible based on the Transcript. Do NOT summarize them into only keywords. Keep the original tone and detail of the interaction.
   - For each item:
     - feedback: 2–3 sentences, must include evidence
     - score: 0–100 integer using the calibration above
