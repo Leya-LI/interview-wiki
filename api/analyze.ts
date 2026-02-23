@@ -83,6 +83,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const body = (req.body ?? {}) as AnalyzeBody;
     const lang: "zh" | "en" = body.lang === "en" ? "en" : "zh";
+    const languageRule = lang === "zh" 
+      ? "必须使用简体中文生成所有分析内容。" 
+      : "All analysis content must be generated in English.";
     const OUTPUT_LANG_DESC =
       lang === "zh"
         ? "Simplified Chinese (简体中文). Do NOT mix English unless it is a proper noun (e.g., company/tool name) or a fixed enum value."
