@@ -31,6 +31,7 @@ import { supabase } from "@/lib/supabase";
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 
 type AnalyzeRequestBody = {
+  AnalyzeRequestBody;
   jdText: string;
   resumeText: string;
   transcriptText: string;
@@ -42,7 +43,7 @@ type AnalyzeRequestBody = {
 export default function NewReviewPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
@@ -74,6 +75,7 @@ export default function NewReviewPage() {
       setIsAnalyzing(true);
 
       const payload: AnalyzeRequestBody = {
+        lang: language === "zh" ? "zh" : "en",
         jdText,
         resumeText,
         transcriptText,
