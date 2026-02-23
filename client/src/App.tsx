@@ -48,11 +48,8 @@ function Router() {
       {showSidebar && <Sidebar className="w-64 flex-shrink-0 hidden md:block border-r" />}
 
       <main className="flex-1 flex flex-col min-h-0 overflow-auto">
-        {/* ✅ 顶栏占位：不会遮挡按钮 */}
-        <div className="sticky top-0 z-[60] w-full flex justify-end p-4 bg-background/70 backdrop-blur">
-          <LanguageToggle />
-        </div>
-
+        {/* ❌ 移除这里的独立顶栏，将其移入具体的 Page 组件 Header 中 */}
+        
         <Switch>
           <Route path="/" component={LandingPage} />
           <Route path="/new" component={NewReviewPage} />
