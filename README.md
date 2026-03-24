@@ -7,7 +7,7 @@
 
 **Interview Wiki** is an AI-powered interview preparation and feedback platform. It leverages artificial intelligence to provide users with actionable insights, helping candidates refine their interview skills, structure their answers, and build confidence through an interactive, modern web interface.
 
-🌐 **Live Demo:** [interview-wiki-lac.vercel.app](https://interview-wiki-lac.vercel.app)
+🌐 **Live Demo:** [interview-wiki-lac.vercel.app]([https://interview-wiki-lac.vercel.app](https://interview-wiki-lac.vercel.app/))
 
 
 
